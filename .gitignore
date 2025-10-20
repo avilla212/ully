@@ -1,0 +1,46 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Build output
+dist/
+build/
+tmp/
+temp/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Google Cloud / API credentials
+*.json
+!package.json
+!tsconfig.json
+
+# Logs
+logs/
+*.log
+*.log.*
+debug.log
+error.log
+
+# IDE / Editor settings
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# OS-specific
+Thumbs.db
+
+# Optional: uploads or test images
+uploads/
+public/uploads/

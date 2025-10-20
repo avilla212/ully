@@ -1,0 +1,9 @@
+MVP Breakdown
+
+1. Input
+    - Core: Upload or capture an image that contains text
+    - MVP implementation: Use a simple file upload or camera capture in a web or mobile app
+
+2. Text Detection (OCR)
+- Goal: Detect and extract all text regions form the image
+- MVP implementation: 
