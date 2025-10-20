@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>In-place Translate (EN → ES)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root { --gap: 16px; }
+      * { box-sizing: border-box; }
+      body { font-family: system-ui, sans-serif; margin: 24px; color: #222; }
+      h1 { margin-bottom: 4px; font-size: 22px; }
+      .sub { color: #666; margin-bottom: 18px; }
+      .row { display: flex; flex-wrap: wrap; gap: var(--gap); }
+      .col { flex: 1 1 360px; min-width: 300px; }
+      .panel { border: 1px solid #ddd; border-radius: 10px; padding: 16px; background: #fff; }
+      .drop {
+        border: 2px dashed #bbb;
+        border-radius: 12px;
+        padding: 22px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+      }
+      .drop.dragover { border-color: #4f46e5; background: #f6f8ff; }
+      .btn {
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+      }
+      .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      .muted { color: #666; font-size: 12px; }
+      img { width: 100%; border-radius: 8px; border: 1px solid #eee; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+      .hidden { display: none !important; }
+      .progress {
+        display: inline-flex; align-items: center; gap: 8px;
+        color: #555; font-size: 14px; margin-left: 12px;
+      }
+      .spinner {
+        width: 16px; height: 16px;
+        border: 2px solid #ccc; border-top-color: #222;
+        border-radius: 50%; animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .error {
+        color: #b00020;
+        background: #ffeef0;
+        border: 1px solid #f5c2c7;
+        padding: 10px 12px;
+        border-radius: 10px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>In-place Translate (English → Spanish)</h1>
+    <p class="sub">
+      Upload a clear image containing printed English text. The app will OCR → translate → overlay Spanish text.
+    </p>
+
+    <div class="row">
+      <div class="col">
+        <div id="drop" class="panel drop">
+          <strong>Drop an image here</strong><br />
+          <span class="muted">or click to choose a file</span>
+          <input id="file" type="file" accept="image/*" class="hidden" />
+        </div>
+
+        <div style="margin-top: 12px;">
+          <button id="translateBtn" class="btn" disabled>Translate</button>
+          <span id="progress" class="progress hidden">
+            <span class="spinner"></span> Translating…
+          </span>
+        </div>
+
+        <div id="error" class="error hidden" role="alert"></div>
+      </div>
+
+      <div class="col">
+        <div class="grid">
+          <div>
+            <div class="muted" style="margin-bottom: 6px;">Original</div>
+            <img id="orig" alt="Original preview" />
+          </div>
+          <div>
+            <div class="muted" style="margin-bottom: 6px;">Translated</div>
+            <img id="out" alt="Translated image" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./main.js"></script>
+  </body>
+</html>
