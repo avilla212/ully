@@ -53,22 +53,51 @@ app.post('/translate-image', upload.single('image'), async (req, res) => {
     const anno = await ocrBuffer(buf);
 
     // 2) Extract "blocks" of text and their bounding boxes
+// --- build regions from PARAGRAPHS (smaller, better-aligned boxes) ---
 const pages = anno?.pages ?? [];
-const blocks = pages.flatMap(p => p.blocks ?? []);
-const regions = blocks.map(b => {
-  const text = (b.paragraphs ?? [])
-    .map(pg => (pg.words ?? [])
-      .map(w => (w.symbols ?? []).map(s => s.text ?? '').join(''))
-      .join(' ')
-    ).join(' ').trim();
 
-  const box = (b.boundingBox?.vertices ?? []).map(v => ({
-    x: v?.x ?? 0,
-    y: v?.y ?? 0,
-  }));
+type Pt = { x: number; y: number };
+type Region = { text: string; box: Pt[] };
 
-  return { text, box };
-}).filter(r => r.text && r.box.length >= 4);
+// Reconstruct paragraph text using Vision's detected breaks
+function getParagraphText(pg: any) {
+  let out = '';
+  for (const w of (pg.words ?? [])) {
+    for (const s of (w.symbols ?? [])) {
+      out += s.text ?? '';
+      const br = s.property?.detectedBreak?.type;
+      // numeric fallbacks because some clients return enums as numbers
+      if (br === 'SPACE' || br === 1) out += ' ';
+      if (br === 'EOL_SURE_SPACE' || br === 3) out += ' ';
+      if (br === 'LINE_BREAK' || br === 5) out += '\n';
+    }
+  }
+  return out.replace(/[ \t]+\n/g, '\n').trim();
+}
+
+const regions: Region[] = [];
+for (const p of pages) {
+  for (const b of (p.blocks ?? [])) {
+    for (const pg of (b.paragraphs ?? [])) {
+      const text = getParagraphText(pg);
+      const box = (pg.boundingBox?.vertices ?? []).map((v: any) => ({
+        x: v?.x ?? 0,
+        y: v?.y ?? 0,
+      }));
+      if (text && box.length >= 4) regions.push({ text, box });
+    }
+  }
+}
+
+// (optional but helps): draw roughly top→bottom, then left→right
+regions.sort((a, b) => {
+  const ay = Math.min(...a.box.map(p => p.y ?? 0));
+  const by = Math.min(...b.box.map(p => p.y ?? 0));
+  if (Math.abs(ay - by) > 6) return ay - by;
+  const ax = Math.min(...a.box.map(p => p.x ?? 0));
+  const bx = Math.min(...b.box.map(p => p.x ?? 0));
+  return ax - bx;
+});
 
     // 3) Translate (English → Spanish). You can change 'es' to any target code.
     const translated: string[] = await translateBatch(regions.map(r => r.text), 'es');
