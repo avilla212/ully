@@ -14,13 +14,26 @@
  */
 
 import 'dotenv/config';
+
+// controls how many requests per IP are allowed
+import rateLimit from 'express-rate-limit';
+
+// adds security related http headers to protect against commons attacks
+import helmet from 'helmet';
+
 import express from 'express';
-import multer from 'multer';
 import path from 'path';
 
 // Your helpers (must exist in google.ts / overlay.ts)
 import { ocrBuffer, translateBatch } from './google';
 import { overlayTranslations } from './overlay';
+
+// middleware/limiters.ts
+import {
+  translateLimiter,
+  burstLimiter,
+  upload,
+} from './middleware/limiters';
 
 // ----------------------------------------------------------------------------
 // Read your custom env vars (useful for logging/sanity checks)
@@ -30,12 +43,25 @@ const KEY_FILE = process.env.GOOGLE_APPLICATION_CREDENTIALS;          // absolut
 const PORT = Number(process.env.PORT ?? 3000);
 
 // ----------------------------------------------------------------------------
-// Express + Multer setup
+// Express + Multer setup + Helmet + Rate Limiter
 // ----------------------------------------------------------------------------
 const app = express();
+app.use(helmet({
+  contentSecurityPolicy : {
+    useDefaults: true,
+    directives: {
+      "img-src": ["'self'", "data:", "blob:"],
 
-// Keep uploads in memory as Buffer → perfect to pass to Vision/Translate
-const upload = multer({ storage: multer.memoryStorage() });
+      // scripts
+      "script-src": ["'self'"],
+      "connect-src": ["'self'"],
+
+      // inline <style> in index.html
+      "style-src": ["'self'", "'unsafe-inline'"],
+  },
+},
+}));
+app.set('trust proxy', 1); // trust first proxy if behind one
 
 // Serve the tiny frontend (public/index.html)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -43,7 +69,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ----------------------------------------------------------------------------
 // Main route: /translate-image
 // ----------------------------------------------------------------------------
-app.post('/translate-image', upload.single('image'), async (req, res) => {
+app.post('/translate-image', translateLimiter, burstLimiter, upload.single('image') , async (req, res) => {
   try {
     // 0) Validate upload
     const buf = req.file?.buffer;
@@ -56,6 +82,9 @@ app.post('/translate-image', upload.single('image'), async (req, res) => {
 // --- build regions from PARAGRAPHS (smaller, better-aligned boxes) ---
 const pages = anno?.pages ?? [];
 
+// We use type to create an alias for the point and region structures
+// type Pt represents a point with x and y coordinates
+// type Region represents a text region with its text content and bounding box  
 type Pt = { x: number; y: number };
 type Region = { text: string; box: Pt[] };
 
